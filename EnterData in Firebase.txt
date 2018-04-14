@@ -1,0 +1,21 @@
+public class MainActivity extends AppCompatActivity {
+private Button mSendData;
+private Firebase mRef;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        Firebase.setAndroidContext(this);
+        mRef = new Firebase("https://basefire-71548.firebaseio.com/");
+        mSendData = (Button)findViewById(R.id.button2);
+        mSendData.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Firebase mRefChild = mRef.child("Name");
+                mRefChild.setValue("ABC");
+            }
+        });
+
+    }
+}
