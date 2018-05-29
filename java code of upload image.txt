@@ -1,0 +1,133 @@
+public class MainActivity extends AppCompatActivity {
+    private ImageView setupImage;
+    private ProgressDialog mprogress;
+    private Uri mainImageURI = null;
+    private EditText setupName;
+    private Button setupBtn;
+    private String user_id;
+    private boolean isChanged = false;
+    private StorageReference storageReference, mstorage;
+    private FirebaseAuth firebaseAuth;
+    private DatabaseReference mDatabase;
+    private FirebaseFirestore firebaseFirestore;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        mprogress = new ProgressDialog(this);
+
+        getSupportActionBar().setTitle("Account Settings");
+
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        firebaseAuth = FirebaseAuth.getInstance();
+        storageReference = FirebaseStorage.getInstance().getReference();
+        firebaseFirestore = FirebaseFirestore.getInstance();
+        setupName = (EditText) findViewById(R.id.postname);
+        setupBtn = (Button) findViewById(R.id.submitbtn);
+
+
+        setupImage = (ImageView) findViewById(R.id.setup_image);
+        setupImage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                BringImagePicker();
+            }
+        });
+
+
+        setupBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final String user_name = setupName.getText().toString();
+
+
+                if (!TextUtils.isEmpty(user_name) && mainImageURI != null) {
+
+                    mprogress.setMessage("updating...");
+                    mprogress.show();
+                    if (isChanged) {
+
+
+                        StorageReference image_path = storageReference.child("Profile_images");
+                        image_path.putFile(mainImageURI).addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
+                            @Override
+                            public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
+
+
+                                if (task.isSuccessful()) {
+
+                                    storeFirestore(task, user_name);
+                                    mprogress.dismiss();
+                                    Toast.makeText(MainActivity.this,"ACCOUNT UPDATED",Toast.LENGTH_LONG).show();
+
+
+                                } else {
+                                    String error = task.getException().getMessage();
+                                    Toast.makeText(MainActivity.this, "Error : " + error, Toast.LENGTH_LONG).show();
+                                }
+
+
+                            }
+                        });
+
+                    } else {
+
+                        storeFirestore(null, user_name);
+
+                    }
+                }
+            }
+
+        });
+
+
+    }
+
+
+    private void BringImagePicker() {
+        CropImage.activity()
+                .setGuidelines(CropImageView.Guidelines.ON)
+                .setAspectRatio(1, 1)
+                .start(MainActivity.this);
+    }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
+            CropImage.ActivityResult result = CropImage.getActivityResult(data);
+            if (resultCode == RESULT_OK) {
+                mainImageURI = result.getUri();
+
+                setupImage.setImageURI(mainImageURI);
+                isChanged = true;
+
+            } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
+                Exception error = result.getError();
+            }
+        }
+    }
+
+    private void storeFirestore(@NonNull Task<UploadTask.TaskSnapshot> task, String user_name) {
+        Uri download_uri;
+        mprogress.show();
+        if (task != null) {
+
+
+            download_uri = task.getResult().getDownloadUrl();
+
+        } else {
+            download_uri = mainImageURI;
+
+        }
+
+
+        Map<String, String> usermap = new HashMap<>();
+        usermap.put("name", user_name);
+        usermap.put("image", download_uri.toString());
+
+    }
+}
